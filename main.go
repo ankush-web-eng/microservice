@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -25,6 +26,10 @@ func main() {
 	config.DB.AutoMigrate(&models.User{})
 
 	router := mux.NewRouter()
+
+	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode(map[string]string{"message": "This is a sample microservice"})
+	}).Methods("GET")
 
 	router.HandleFunc("/signup", routes.SignupHandler).Methods("POST")
 	router.HandleFunc("/signin", routes.SigninHandler).Methods("POST")
