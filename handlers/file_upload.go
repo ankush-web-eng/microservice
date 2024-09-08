@@ -17,6 +17,8 @@ func UploadFileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
+	os.MkdirAll("temp-images", os.ModePerm)
+
 	tempFile, err := os.CreateTemp("temp-images", "upload-*.png")
 	if err != nil {
 		http.Error(w, "Unable to create temp file", http.StatusInternalServerError)

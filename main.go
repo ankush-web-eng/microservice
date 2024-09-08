@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/ankush-web-eng/microservice/config"
@@ -11,6 +12,7 @@ import (
 	"github.com/ankush-web-eng/microservice/models"
 	"github.com/ankush-web-eng/microservice/routes"
 	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 )
 
 func main() {
@@ -33,5 +35,15 @@ func main() {
 	authRouter.Use(middlewares.JWTAuthMiddleware)
 	authRouter.HandleFunc("/protected", controllers.ProtectedHandler).Methods("GET")
 
-	http.ListenAndServe(":8080", router)
+	corsOptions := cors.New(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:3000"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE"},
+		AllowedHeaders:   []string{"Authorization", "Content-Type"},
+		AllowCredentials: true,
+	})
+
+	handler := corsOptions.Handler(router)
+
+	fmt.Println("Server is running on port 8080")
+	log.Fatal(http.ListenAndServe(":8080", handler))
 }
