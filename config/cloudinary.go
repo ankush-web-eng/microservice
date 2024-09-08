@@ -26,6 +26,7 @@ func InitCloudinary() {
 func UploadFileToCloudinary(filePath string) (string, error) {
 	uploadResult, err := Cloudinary.Upload.Upload(context.Background(), filePath, uploader.UploadParams{})
 	if err != nil {
+		log.Fatal("Failed to upload file to Cloudinary:", err)
 		return "", err
 	}
 	return uploadResult.SecureURL, nil
