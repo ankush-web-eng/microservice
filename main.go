@@ -36,6 +36,7 @@ func main() {
 	router.HandleFunc("/signin", routes.SigninHandler).Methods("POST")
 	router.HandleFunc("/verify", routes.VerifyHandler).Methods("POST")
 	router.HandleFunc("/upload", handlers.UploadFileHandler).Methods("POST")
+	router.HandleFunc("/send-email", handlers.SendEmailHandler).Methods("POST")
 
 	authRouter := router.PathPrefix("/auth").Subrouter()
 	authRouter.Use(middlewares.JWTAuthMiddleware)
