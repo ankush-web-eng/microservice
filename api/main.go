@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/ankush-web-eng/microservice/config"
 	"github.com/ankush-web-eng/microservice/controllers"
@@ -41,7 +42,7 @@ func main() {
 	authRouter.HandleFunc("/protected", controllers.ProtectedHandler).Methods("GET")
 
 	corsOptions := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000"},
+		AllowedOrigins:   []string{"http://localhost:3000", "https://go.ankushsingh.tech"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE"},
 		AllowedHeaders:   []string{"Authorization", "Content-Type"},
 		AllowCredentials: true,
@@ -49,6 +50,11 @@ func main() {
 
 	handler := corsOptions.Handler(router)
 
+	port := "8080"
+	if envPort := os.Getenv("PORT"); envPort != "" {
+		port = envPort
+	}
+
 	fmt.Println("Server is running on port 8080")
-	log.Fatal(http.ListenAndServe(":8080", handler))
+	log.Fatal(http.ListenAndServe(":"+port, handler))
 }

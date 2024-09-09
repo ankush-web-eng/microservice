@@ -1,7 +1,30 @@
 {
-    "build": {
-      "env": {
-        "GO_BUILD_FLAGS": "-ldflags '-s -w'"
-      }
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/main.go",
+      "use": "@vercel/go"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "api/main.go"
+    }
+  ],
+  "env": {
+    "CLOUDINARY_URL": "@cloudinary_url",
+    "CLOUDINARY_API_KEY": "@cloudinary_api_key",
+    "CLOUDINARY_API_SECRET": "@cloudinary_api_secret",
+    "CLOUDINARY_CLOUD_NAME": "@cloudinary_cloud_name",
+    "DATABASE_URL": "@database_url",
+    "DB_NAME": "@db_name",
+    "DB_USER": "@db_user",
+    "DB_PASSWORD": "@db_password"
+  },
+  "build": {
+    "env": {
+      "GO_BUILD_FLAGS": "-ldflags '-s -w'"
     }
   }
+}
