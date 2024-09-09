@@ -11,7 +11,6 @@ import (
 	"github.com/ankush-web-eng/microservice/controllers"
 	"github.com/ankush-web-eng/microservice/handlers"
 	"github.com/ankush-web-eng/microservice/middlewares"
-	"github.com/ankush-web-eng/microservice/models"
 	"github.com/ankush-web-eng/microservice/routes"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
@@ -20,17 +19,20 @@ import (
 
 func main() {
 
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
+	if os.Getenv("RAILWAY_ENVIRONMENT") == "" {
+		err := godotenv.Load()
+		if err != nil {
+			log.Println("Error loading .env file in railway")
+		}
 	}
+
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "OK")
 	})
 
 	config.InitDB()
 	config.InitCloudinary()
-	config.DB.AutoMigrate(&models.User{})
+	// config.DB.AutoMigrate(&models.User{})
 
 	router := mux.NewRouter()
 
