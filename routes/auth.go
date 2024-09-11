@@ -3,6 +3,7 @@ package routes
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/ankush-web-eng/microservice/config"
 	"github.com/ankush-web-eng/microservice/models"
@@ -44,7 +45,8 @@ func SigninHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := utils.GenerateJWT(user.ID)
+	userID, _ := strconv.ParseUint(user.ID, 10, 64)
+	token, err := utils.GenerateJWT(uint(userID))
 
 	if err != nil {
 		http.Error(w, "Failed to generate token", http.StatusInternalServerError)
@@ -66,7 +68,7 @@ func VerifyHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user.IsActive = true
+	user.IsVerified = true
 	config.DB.Save(&user)
 
 	json.NewEncoder(w).Encode(map[string]string{"message": "Account verified"})
