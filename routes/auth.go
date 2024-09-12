@@ -2,14 +2,20 @@ package routes
 
 import (
 	"encoding/json"
+	"math/rand"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/ankush-web-eng/microservice/config"
 	"github.com/ankush-web-eng/microservice/models"
-	"github.com/ankush-web-eng/microservice/utils"
 	"golang.org/x/crypto/bcrypt"
 )
+
+func generateOTP() int {
+	rand.Seed(time.Now().UnixNano())
+	return rand.Intn(900000) + 100000
+}
 
 func SignupHandler(w http.ResponseWriter, r *http.Request) {
 	var user models.User
@@ -23,6 +29,8 @@ func SignupHandler(w http.ResponseWriter, r *http.Request) {
 
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	user.Password = string(hashedPassword)
+
+	user.VerifyCode = strconv.Itoa(generateOTP())
 
 	config.DB.Create(&user)
 
@@ -45,15 +53,7 @@ func SigninHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, _ := strconv.ParseUint(user.ID, 10, 64)
-	token, err := utils.GenerateJWT(uint(userID))
-
-	if err != nil {
-		http.Error(w, "Failed to generate token", http.StatusInternalServerError)
-		return
-	}
-
-	json.NewEncoder(w).Encode(map[string]string{"token": token})
+	json.NewEncoder(w).Encode(map[string]string{"message": "Logged in"})
 }
 
 func VerifyHandler(w http.ResponseWriter, r *http.Request) {
