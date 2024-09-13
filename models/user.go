@@ -2,12 +2,10 @@ package models
 
 import (
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type User struct {
-	gorm.Model
+	// gorm.Model
 	ID         string     `gorm:"primaryKey;type:uuid;default:uuid_generate_v4()"`
 	Name       string     `gorm:"size:255;not null"`
 	Email      string     `gorm:"size:255;not null;unique"`
@@ -22,7 +20,7 @@ type User struct {
 }
 
 type Cloudinary struct {
-	gorm.Model
+	// gorm.Model
 	ID        string    `gorm:"primaryKey;type:uuid;default:uuid_generate_v4()"`
 	CloudName string    `gorm:"size:255;not null"`
 	APIKey    string    `gorm:"size:255;not null"`
@@ -33,7 +31,7 @@ type Cloudinary struct {
 }
 
 type Mail struct {
-	gorm.Model
+	// gorm.Model
 	ID        string    `gorm:"primaryKey;type:uuid;default:uuid_generate_v4()"`
 	Email     string    `gorm:"size:255;not null"`
 	Password  string    `gorm:"size:255;not null"`

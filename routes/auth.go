@@ -35,21 +35,35 @@ func SignupHandler(w http.ResponseWriter, r *http.Request) {
 	err := config.DB.Session(&gorm.Session{PrepareStmt: false}).WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var existingUser models.User
 		if err := tx.Where("email = ?", user.Email).First(&existingUser).Error; err == nil {
-			return fmt.Errorf("user already exists")
+			if existingUser.IsVerified {
+				return fmt.Errorf("user already exists")
+			}
+
+			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+			if err != nil {
+				return fmt.Errorf("error while hashing password: %w", err)
+			}
+			existingUser.Password = string(hashedPassword)
+			existingUser.VerifyCode = strconv.Itoa(generateOTP())
+
+			if err := tx.Save(&existingUser).Error; err != nil {
+				return fmt.Errorf("error updating user in the database: %w", err)
+			}
+
+			user = existingUser
 		} else if err != gorm.ErrRecordNotFound {
 			return err
-		}
+		} else {
+			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+			if err != nil {
+				return fmt.Errorf("error while hashing password: %w", err)
+			}
+			user.Password = string(hashedPassword)
+			user.VerifyCode = strconv.Itoa(generateOTP())
 
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-		if err != nil {
-			return fmt.Errorf("error while hashing password: %w", err)
-		}
-		user.Password = string(hashedPassword)
-
-		user.VerifyCode = strconv.Itoa(generateOTP())
-
-		if err := tx.Create(&user).Error; err != nil {
-			return fmt.Errorf("error creating user in the database: %w", err)
+			if err := tx.Create(&user).Error; err != nil {
+				return fmt.Errorf("error creating user in the database: %w", err)
+			}
 		}
 
 		return nil
@@ -58,12 +72,6 @@ func SignupHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("Error in SignupHandler: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if user.IsVerified {
-		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(map[string]string{"message": "User created"})
 		return
 	}
 
@@ -109,7 +117,7 @@ func SigninHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
-
+	fmt.Print(json.NewEncoder(w).Encode(user))
 	json.NewEncoder(w).Encode(user)
 }
 
