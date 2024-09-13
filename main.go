@@ -1,16 +1,12 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 
 	"github.com/ankush-web-eng/microservice/config"
-	"github.com/ankush-web-eng/microservice/controllers"
-	"github.com/ankush-web-eng/microservice/handlers"
-	"github.com/ankush-web-eng/microservice/middlewares"
 	"github.com/ankush-web-eng/microservice/models"
 	"github.com/ankush-web-eng/microservice/routes"
 	"github.com/gorilla/mux"
@@ -27,10 +23,6 @@ func main() {
 		}
 	}
 
-	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "OK")
-	})
-
 	config.InitDB()
 	config.InitCloudinary()
 	config.DB.AutoMigrate(&models.User{})
@@ -38,21 +30,8 @@ func main() {
 	config.DB.AutoMigrate(&models.Cloudinary{})
 
 	router := mux.NewRouter()
-
-	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(map[string]string{"message": "This is a sample microservice"})
-	}).Methods("GET")
-
-	router.HandleFunc("/signup", routes.SignupHandler).Methods("POST")
-	router.HandleFunc("/signin", routes.SigninHandler).Methods("POST")
-	router.HandleFunc("/verify", routes.VerifyHandler).Methods("POST")
-	router.HandleFunc("/signin/verify", routes.AuthVerifier).Methods("POST")
-	router.HandleFunc("/upload", handlers.UploadFileHandler).Methods("POST")
-	router.HandleFunc("/send-email", handlers.SendEmailHandler).Methods("POST")
-
-	authRouter := router.PathPrefix("/auth").Subrouter()
-	authRouter.Use(middlewares.JWTAuthMiddleware)
-	authRouter.HandleFunc("/protected", controllers.ProtectedHandler).Methods("GET")
+	routes.AuthRoutes(router)
+	routes.ServiceHandler(router)
 
 	corsOptions := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:3000", "https://dev.ankushsingh.tech"},
