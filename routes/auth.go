@@ -1,7 +1,10 @@
 package routes
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
+	"log"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -11,6 +14,7 @@ import (
 	email "github.com/ankush-web-eng/microservice/emails"
 	"github.com/ankush-web-eng/microservice/models"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 func generateOTP() int {
@@ -25,32 +29,49 @@ func SignupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var existingUser models.User
-	if err := config.DB.Where("email = ?", user.Email).First(&existingUser).Error; err == nil {
-		http.Error(w, "User already exists", http.StatusBadRequest)
-		return
-	}
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-	if err != nil {
-		http.Error(w, "Error while hashing password", http.StatusInternalServerError)
-		return
-	}
-	user.Password = string(hashedPassword)
+	err := config.DB.Session(&gorm.Session{PrepareStmt: false}).WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var existingUser models.User
+		if err := tx.Where("email = ?", user.Email).First(&existingUser).Error; err == nil {
+			return fmt.Errorf("user already exists")
+		} else if err != gorm.ErrRecordNotFound {
+			return err
+		}
 
-	user.VerifyCode = strconv.Itoa(generateOTP())
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return fmt.Errorf("error while hashing password: %w", err)
+		}
+		user.Password = string(hashedPassword)
 
-	if err := config.DB.Create(&user).Error; err != nil {
-		http.Error(w, "Error creating user in the database", http.StatusInternalServerError)
-		return
-	}
+		user.VerifyCode = strconv.Itoa(generateOTP())
 
-	email.SendEmail(email.EmailDetails{
-		From:    "ankushsingh.dev@gmail.com",
-		To:      []string{user.Email},
-		Subject: "Verify your email",
-		Body:    "Your verification code is " + user.VerifyCode,
+		if err := tx.Create(&user).Error; err != nil {
+			return fmt.Errorf("error creating user in the database: %w", err)
+		}
+
+		return nil
 	})
+
+	if err != nil {
+		log.Printf("Error in SignupHandler: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	go func() {
+		err := email.SendEmail(email.EmailDetails{
+			From:    "ankushsingh.dev@gmail.com",
+			To:      []string{user.Email},
+			Subject: "Verify your email",
+			Body:    "Your verification code is " + user.VerifyCode,
+		})
+		if err != nil {
+			log.Printf("Error sending email: %v", err)
+		}
+	}()
 
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]string{"message": "User created"})
@@ -58,10 +79,17 @@ func SignupHandler(w http.ResponseWriter, r *http.Request) {
 
 func SigninHandler(w http.ResponseWriter, r *http.Request) {
 	var input models.User
-	json.NewDecoder(r.Body).Decode(&input)
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, "Invalid input", http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
 
 	var user models.User
-	if err := config.DB.Where("email = ?", input.Email).First(&user).Error; err != nil {
+	if err := config.DB.Session(&gorm.Session{PrepareStmt: false}).WithContext(ctx).Where("email = ?", input.Email).First(&user).Error; err != nil {
+		log.Printf("Error in SigninHandler: %v", err)
 		http.Error(w, "User does not exist", http.StatusUnauthorized)
 		return
 	}
@@ -79,10 +107,17 @@ func VerifyHandler(w http.ResponseWriter, r *http.Request) {
 		Email      string
 		VerifyCode string
 	}
-	json.NewDecoder(r.Body).Decode(&input)
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, "Invalid input", http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
 
 	var user models.User
-	if err := config.DB.Where("email = ?", input.Email).First(&user).Error; err != nil {
+	if err := config.DB.Session(&gorm.Session{PrepareStmt: false}).WithContext(ctx).Where("email = ?", input.Email).First(&user).Error; err != nil {
+		log.Printf("Error in VerifyHandler: %v", err)
 		http.Error(w, "User not found", http.StatusNotFound)
 		return
 	}
@@ -93,7 +128,11 @@ func VerifyHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user.IsVerified = true
-	config.DB.Save(&user)
+	if err := config.DB.Session(&gorm.Session{PrepareStmt: false}).WithContext(ctx).Save(&user).Error; err != nil {
+		log.Printf("Error in VerifyHandler: %v", err)
+		http.Error(w, "Error updating user", http.StatusInternalServerError)
+		return
+	}
 
 	json.NewEncoder(w).Encode(map[string]string{"message": "Account verified"})
 }
