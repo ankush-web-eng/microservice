@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ankush-web-eng/microservice/config"
+	email "github.com/ankush-web-eng/microservice/emails"
 	"github.com/ankush-web-eng/microservice/models"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -19,7 +20,10 @@ func generateOTP() int {
 
 func SignupHandler(w http.ResponseWriter, r *http.Request) {
 	var user models.User
-	json.NewDecoder(r.Body).Decode(&user)
+	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+		http.Error(w, "Invalid input", http.StatusBadRequest)
+		return
+	}
 
 	var existingUser models.User
 	if err := config.DB.Where("email = ?", user.Email).First(&existingUser).Error; err == nil {
@@ -27,12 +31,26 @@ func SignupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	if err != nil {
+		http.Error(w, "Error while hashing password", http.StatusInternalServerError)
+		return
+	}
 	user.Password = string(hashedPassword)
 
 	user.VerifyCode = strconv.Itoa(generateOTP())
 
-	config.DB.Create(&user)
+	if err := config.DB.Create(&user).Error; err != nil {
+		http.Error(w, "Error creating user in the database", http.StatusInternalServerError)
+		return
+	}
+
+	email.SendEmail(email.EmailDetails{
+		From:    "ankushsingh.dev@gmail.com",
+		To:      []string{user.Email},
+		Subject: "Verify your email",
+		Body:    "Your verification code is " + user.VerifyCode,
+	})
 
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]string{"message": "User created"})
@@ -44,7 +62,7 @@ func SigninHandler(w http.ResponseWriter, r *http.Request) {
 
 	var user models.User
 	if err := config.DB.Where("email = ?", input.Email).First(&user).Error; err != nil {
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		http.Error(w, "User does not exist", http.StatusUnauthorized)
 		return
 	}
 
@@ -58,13 +76,19 @@ func SigninHandler(w http.ResponseWriter, r *http.Request) {
 
 func VerifyHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
-		Email string
+		Email      string
+		VerifyCode string
 	}
 	json.NewDecoder(r.Body).Decode(&input)
 
 	var user models.User
 	if err := config.DB.Where("email = ?", input.Email).First(&user).Error; err != nil {
 		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	if user.VerifyCode != input.VerifyCode {
+		http.Error(w, "Invalid verification code", http.StatusUnauthorized)
 		return
 	}
 
