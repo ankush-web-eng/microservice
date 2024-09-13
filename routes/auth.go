@@ -102,7 +102,7 @@ func SigninHandler(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	var user models.User
-	if err := config.DB.Session(&gorm.Session{PrepareStmt: false}).WithContext(ctx).Where("email = ?", input.Email).First(&user).Error; err != nil {
+	if err := config.DB.Session(&gorm.Session{PrepareStmt: true}).WithContext(ctx).Where("email = ?", input.Email).First(&user).Error; err != nil {
 		log.Printf("Error in SigninHandler: %v", err)
 		http.Error(w, "User does not exist", http.StatusUnauthorized)
 		return
@@ -122,6 +122,7 @@ func SigninHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("User %s signed in successfully", user.Email)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(user); err != nil {
 		log.Printf("Error encoding response: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
