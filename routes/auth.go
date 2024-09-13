@@ -109,16 +109,24 @@ func SigninHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !user.IsVerified {
+		log.Printf("User %s is not verified", user.Email)
 		http.Error(w, "User is not verified", http.StatusUnauthorized)
 		return
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password)); err != nil {
+		log.Printf("Password mismatch: %v", err)
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
-	fmt.Print(json.NewEncoder(w).Encode(user))
-	json.NewEncoder(w).Encode(user)
+
+	log.Printf("User %s signed in successfully", user.Email)
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(user); err != nil {
+		log.Printf("Error encoding response: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 }
 
 func VerifyHandler(w http.ResponseWriter, r *http.Request) {
