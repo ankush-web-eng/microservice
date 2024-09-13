@@ -46,6 +46,7 @@ func main() {
 	router.HandleFunc("/signup", routes.SignupHandler).Methods("POST")
 	router.HandleFunc("/signin", routes.SigninHandler).Methods("POST")
 	router.HandleFunc("/verify", routes.VerifyHandler).Methods("POST")
+	router.HandleFunc("/signin/verify", routes.AuthVerifier).Methods("POST")
 	router.HandleFunc("/upload", handlers.UploadFileHandler).Methods("POST")
 	router.HandleFunc("/send-email", handlers.SendEmailHandler).Methods("POST")
 
@@ -54,7 +55,7 @@ func main() {
 	authRouter.HandleFunc("/protected", controllers.ProtectedHandler).Methods("GET")
 
 	corsOptions := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000", "https://go.ankushsingh.tech"},
+		AllowedOrigins:   []string{"http://localhost:3000", "https://dev.ankushsingh.tech"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE"},
 		AllowedHeaders:   []string{"Authorization", "Content-Type"},
 		AllowCredentials: true,

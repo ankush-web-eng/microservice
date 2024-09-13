@@ -61,6 +61,12 @@ func SignupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if user.IsVerified {
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(map[string]string{"message": "User created"})
+		return
+	}
+
 	go func() {
 		err := email.SendEmail(email.EmailDetails{
 			From:    "ankushsingh.dev@gmail.com",
@@ -94,12 +100,17 @@ func SigninHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !user.IsVerified {
+		http.Error(w, "User is not verified", http.StatusUnauthorized)
+		return
+	}
+
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password)); err != nil {
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]string{"message": "Logged in"})
+	json.NewEncoder(w).Encode(user)
 }
 
 func VerifyHandler(w http.ResponseWriter, r *http.Request) {
@@ -135,4 +146,26 @@ func VerifyHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(map[string]string{"message": "Account verified"})
+}
+
+func AuthVerifier(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Email string
+	}
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, "Invalid input", http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	var user models.User
+	if err := config.DB.Session(&gorm.Session{PrepareStmt: false}).WithContext(ctx).Where("email = ?", input.Email).First(&user).Error; err != nil {
+		log.Printf("Error in AuthVerifier: %v", err)
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]bool{"isVerified": user.IsVerified})
 }
