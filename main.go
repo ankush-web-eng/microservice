@@ -25,7 +25,6 @@ func main() {
 	}
 
 	config.InitDB()
-	config.InitCloudinary()
 	config.DB.AutoMigrate(&models.User{})
 	config.DB.AutoMigrate(&models.Mail{})
 	config.DB.AutoMigrate(&models.Cloudinary{})
