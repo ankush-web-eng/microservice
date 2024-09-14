@@ -1,12 +1,16 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
+	"time"
 
+	"github.com/ankush-web-eng/microservice/config"
 	email "github.com/ankush-web-eng/microservice/emails"
 	"github.com/ankush-web-eng/microservice/models"
+	"gorm.io/gorm"
 )
 
 func SendEmailHandler(w http.ResponseWriter, r *http.Request) {
@@ -36,17 +40,39 @@ func SendEmailHandler(w http.ResponseWriter, r *http.Request) {
 
 func SendServiceMailHandler(w http.ResponseWriter, r *http.Request) {
 	var req models.SendEmailRequest
+	emailParam := r.URL.Query().Get("email")
 	err := json.NewDecoder(r.Body).Decode(&req)
+
 	if err != nil {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
 
-	err = email.SendEmail(email.EmailDetails{
-		From:    req.From,
-		To:      req.To,
-		Subject: req.Subject,
-		Body:    req.Body,
+	if emailParam == "" {
+		log.Print("Email is required")
+		http.Error(w, "Email is required", http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	var user models.User
+
+	err = config.DB.Session(&gorm.Session{PrepareStmt: false}).WithContext(ctx).Preload("Mail").Where("email = ?", emailParam).First(&user).Error
+	if err != nil {
+		log.Printf("Failed to find user: %v", err)
+		http.Error(w, "Failed to find user", http.StatusInternalServerError)
+		return
+	}
+
+	err = email.SendEmailAsService(email.EmailDetailsAsService{
+		From:     req.From,
+		To:       req.To,
+		Subject:  req.Subject,
+		Body:     req.Body,
+		Username: user.Mail.Email,
+		Password: user.Mail.Password,
 	})
 
 	if err != nil {
@@ -56,5 +82,12 @@ func SendServiceMailHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Email sent successfully"))
+	response := map[string]string{"message": "Email sent successfully to " + req.To}
+	jsonResponse, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonResponse)
 }

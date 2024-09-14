@@ -85,7 +85,7 @@ func SignupHandler(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		err := email.SendEmail(email.EmailDetails{
 			From:    "ankushsingh.dev@gmail.com",
-			To:      []string{user.Email},
+			To:      user.Email,
 			Subject: "Verify your email",
 			Body:    "Your verification code is " + user.VerifyCode,
 		})

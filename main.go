@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/ankush-web-eng/microservice/config"
+	"github.com/ankush-web-eng/microservice/handlers"
 	"github.com/ankush-web-eng/microservice/models"
 	"github.com/ankush-web-eng/microservice/routes"
 	"github.com/gorilla/mux"
@@ -37,6 +38,9 @@ func main() {
 	routes.AuthRoutes(router)
 	routes.CredentialsRoutes(credentialsRouter)
 	routes.ServiceRoutes(serviceRouter)
+
+	router.HandleFunc("/upload", handlers.UploadFileHandler).Methods("POST")
+	router.HandleFunc("/send-email", handlers.SendEmailHandler).Methods("POST")
 
 	corsOptions := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:3000", "https://dev.ankushsingh.tech"},

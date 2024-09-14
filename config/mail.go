@@ -12,12 +12,26 @@ type SMTPConfig struct {
 	Password string
 }
 
+type SMTPConfigAsService struct {
+	Username string
+	Password string
+}
+
 func LoadSMTPConfig() SMTPConfig {
 	return SMTPConfig{
 		Host:     os.Getenv("SMTP_HOST"),
 		Port:     getEnvAsInt("SMTP_PORT", 587),
 		Username: os.Getenv("SMTP_USERNAME"),
 		Password: os.Getenv("SMTP_PASSWORD"),
+	}
+}
+
+func LoadSMTPConfigAsService(smtp SMTPConfigAsService) SMTPConfig {
+	return SMTPConfig{
+		Host:     os.Getenv("SMTP_HOST"),
+		Port:     getEnvAsInt("SMTP_PORT", 587),
+		Username: smtp.Username,
+		Password: smtp.Password,
 	}
 }
 
