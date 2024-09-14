@@ -9,9 +9,13 @@ import (
 )
 
 var ServiceHandler = func(router *mux.Router) {
+
 	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]string{"message": "This is a sample microservice"})
 	}).Methods("GET")
+
+	router.HandleFunc("/upload", handlers.UploadFileHandler).Methods("POST")
+	router.HandleFunc("/send-email", handlers.SendEmailHandler).Methods("POST")
 	router.HandleFunc("/service/apikey", handlers.ApiKeyHandler).Methods("POST")
 	router.HandleFunc("/service/cloudinary", handlers.CloudinaryHanlder).Methods("POST")
 	router.HandleFunc("/service/mail", handlers.MailHandler).Methods("POST")

@@ -193,3 +193,21 @@ func AuthVerifier(w http.ResponseWriter, r *http.Request) {
 
 	json.NewEncoder(w).Encode(map[string]bool{"isVerified": user.IsVerified})
 }
+
+func GetUserHandler(w http.ResponseWriter, r *http.Request) {
+	email := r.URL.Query().Get("email")
+	var user models.User
+
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	if err := config.DB.Session(&gorm.Session{PrepareStmt: false}).WithContext(ctx).Where("email = ?", email).First(&user).Error; err != nil {
+		log.Printf("Error in GetUserHandler: %v", err)
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(user)
+}
