@@ -30,8 +30,13 @@ func main() {
 	config.DB.AutoMigrate(&models.Cloudinary{})
 
 	router := mux.NewRouter()
+
+	credentialsRouter := router.PathPrefix("/credentials").Subrouter()
+	serviceRouter := router.PathPrefix("/service").Subrouter()
+
 	routes.AuthRoutes(router)
-	routes.ServiceHandler(router)
+	routes.CredentialsRoutes(credentialsRouter)
+	routes.ServiceRoutes(serviceRouter)
 
 	corsOptions := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:3000", "https://dev.ankushsingh.tech"},
