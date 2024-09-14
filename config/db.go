@@ -13,10 +13,16 @@ var DB *gorm.DB
 
 func InitDB() {
 	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		log.Fatal("DATABASE_URL environment variable is not set")
+	}
+
 	var err error
-	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
-		PrepareStmt: false,
-	})
+	DB, err = gorm.Open(postgres.New(postgres.Config{
+		DSN:                  dsn,
+		PreferSimpleProtocol: true,
+	}), &gorm.Config{})
+
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)
 	}

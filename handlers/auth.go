@@ -109,7 +109,7 @@ func SigninHandler(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	var user models.User
-	if err := config.DB.Session(&gorm.Session{PrepareStmt: true}).WithContext(ctx).Where("email = ?", input.Email).First(&user).Error; err != nil {
+	if err := config.DB.Session(&gorm.Session{PrepareStmt: false}).WithContext(ctx).Where("email = ?", input.Email).First(&user).Error; err != nil {
 		log.Printf("Error in SigninHandler: %v", err)
 		http.Error(w, "User does not exist", http.StatusUnauthorized)
 		return
@@ -201,7 +201,7 @@ func GetUserHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
-	if err := config.DB.Session(&gorm.Session{PrepareStmt: false}).WithContext(ctx).Where("email = ?", email).First(&user).Error; err != nil {
+	if err := config.DB.Session(&gorm.Session{PrepareStmt: false}).WithContext(ctx).Preload("Cloudinary").Preload("Mail").Where("email = ?", email).First(&user).Error; err != nil {
 		log.Printf("Error in GetUserHandler: %v", err)
 		http.Error(w, "User not found", http.StatusNotFound)
 		return
