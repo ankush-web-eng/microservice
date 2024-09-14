@@ -53,7 +53,7 @@ func ApiKeyHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"apikey": apikey})
+	json.NewEncoder(w).Encode(apikey)
 }
 
 func CloudinaryHanlder(w http.ResponseWriter, r *http.Request) {
