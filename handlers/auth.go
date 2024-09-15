@@ -17,6 +17,20 @@ import (
 	"gorm.io/gorm"
 )
 
+func sendVerificationEmail(userEmail, verifyCode string) {
+	go func() {
+		err := email.SendEmail(email.EmailDetails{
+			From:    "ankushsingh.dev@gmail.com",
+			To:      userEmail,
+			Subject: "Verify your email",
+			Body:    "Your verification code is " + verifyCode,
+		})
+		if err != nil {
+			log.Printf("Error sending email: %v", err)
+		}
+	}()
+}
+
 func SignupHandler(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
@@ -51,7 +65,6 @@ func SignupHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			user = existingUser
-
 		} else if err != gorm.ErrRecordNotFound {
 			return err
 		} else {
@@ -72,7 +85,6 @@ func SignupHandler(w http.ResponseWriter, r *http.Request) {
 				return fmt.Errorf("error creating user in the database: %w", err)
 			}
 		}
-
 		return nil
 	})
 
@@ -82,17 +94,7 @@ func SignupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	go func() {
-		err := email.SendEmail(email.EmailDetails{
-			From:    "ankushsingh.dev@gmail.com",
-			To:      user.Email,
-			Subject: "Verify your email",
-			Body:    "Your verification code is " + user.VerifyCode,
-		})
-		if err != nil {
-			log.Printf("Error sending email: %v", err)
-		}
-	}()
+	sendVerificationEmail(user.Email, user.VerifyCode)
 
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]string{"message": "User created"})
@@ -201,9 +203,21 @@ func GetUserHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
-	if err := config.DB.Session(&gorm.Session{PrepareStmt: false}).WithContext(ctx).Preload("Cloudinary").Preload("Mail").Where("email = ?", email).First(&user).Error; err != nil {
-		log.Printf("Error in GetUserHandler: %v", err)
-		http.Error(w, "User not found", http.StatusNotFound)
+	done := make(chan error)
+	go func() {
+		err := config.DB.Session(&gorm.Session{PrepareStmt: false}).WithContext(ctx).Preload("Cloudinary").Preload("Mail").Where("email = ?", email).First(&user).Error
+		done <- err
+	}()
+
+	select {
+	case err := <-done:
+		if err != nil {
+			log.Printf("Error in GetUserHandler: %v", err)
+			http.Error(w, "User not found", http.StatusNotFound)
+			return
+		}
+	case <-ctx.Done():
+		http.Error(w, "Request timed out", http.StatusRequestTimeout)
 		return
 	}
 
