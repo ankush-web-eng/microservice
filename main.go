@@ -42,9 +42,9 @@ func main() {
 	router.HandleFunc("/send-email", handlers.SendEmailHandler).Methods("POST")
 
 	corsOptions := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000", "https://dev.ankushsingh.tech"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE"},
-		AllowedHeaders:   []string{"Authorization", "Content-Type"},
+		AllowedOrigins:   []string{"*"},
+		AllowedMethods:   []string{"GET", "POST"},
+		AllowedHeaders:   []string{"Authorization", "Content-Type", "API_KEY"},
 		AllowCredentials: true,
 	})
 

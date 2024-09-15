@@ -51,7 +51,7 @@ func UploadFileHandler(w http.ResponseWriter, r *http.Request) {
 
 func UploadServiceFileHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseMultipartForm(10 << 20)
-	tempEmail := r.URL.Query().Get("email")
+	apikey := r.Header.Get("API_KEY")
 	file, _, err := r.FormFile("file")
 	if err != nil {
 		http.Error(w, "Unable to read file", http.StatusBadRequest)
@@ -80,7 +80,7 @@ func UploadServiceFileHandler(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	var user models.User
-	err = config.DB.Session(&gorm.Session{PrepareStmt: false}).WithContext(ctx).Preload("Cloudinary").First(&user, "email = ?", tempEmail).Error
+	err = config.DB.Session(&gorm.Session{PrepareStmt: false}).WithContext(ctx).Preload("Cloudinary").First(&user, "api_key = ?", apikey).Error
 	if err != nil {
 		http.Error(w, "User not found", http.StatusNotFound)
 		return

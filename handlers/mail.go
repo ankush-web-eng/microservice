@@ -40,7 +40,7 @@ func SendEmailHandler(w http.ResponseWriter, r *http.Request) {
 
 func SendServiceMailHandler(w http.ResponseWriter, r *http.Request) {
 	var req models.SendEmailRequest
-	emailParam := r.URL.Query().Get("email")
+	apikey := r.Header.Get("API_KEY")
 	err := json.NewDecoder(r.Body).Decode(&req)
 
 	if err != nil {
@@ -48,9 +48,9 @@ func SendServiceMailHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if emailParam == "" {
-		log.Print("Email is required")
-		http.Error(w, "Email is required", http.StatusBadRequest)
+	if apikey == "" {
+		log.Print("APIKEY is required")
+		http.Error(w, "API KEY is required", http.StatusBadRequest)
 		return
 	}
 
@@ -59,7 +59,7 @@ func SendServiceMailHandler(w http.ResponseWriter, r *http.Request) {
 
 	var user models.User
 
-	err = config.DB.Session(&gorm.Session{PrepareStmt: false}).WithContext(ctx).Preload("Mail").Where("email = ?", emailParam).First(&user).Error
+	err = config.DB.Session(&gorm.Session{PrepareStmt: false}).WithContext(ctx).Preload("Mail").Where("api_key = ?", apikey).First(&user).Error
 	if err != nil {
 		log.Printf("Failed to find user: %v", err)
 		http.Error(w, "Failed to find user", http.StatusInternalServerError)
