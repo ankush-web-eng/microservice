@@ -21,7 +21,7 @@ func sendVerificationEmail(userEmail, verifyCode string) {
 	go func() {
 		err := email.SendEmail(email.EmailDetails{
 			From:    "ankushsingh.dev@gmail.com",
-			To:      userEmail,
+			To:      []string{userEmail},
 			Subject: "Verify your email",
 			Body:    "Your verification code is " + verifyCode,
 		})

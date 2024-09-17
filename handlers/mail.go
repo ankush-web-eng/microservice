@@ -82,7 +82,7 @@ func SendServiceMailHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	response := map[string]string{"message": "Email sent successfully to " + req.To}
+	response := map[string]string{"message": "Email sent successfully"}
 	jsonResponse, err := json.Marshal(response)
 	if err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
